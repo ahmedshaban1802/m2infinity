@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id         String   @id @default(cuid())
+  username   String   @unique
+  password   String
+  role       String   @default("employee") // admin, employee
+  employeeId String?
+  isApproved Boolean  @default(false)
+  lastLogin  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+  notifications Notification[]
+
+  @@index([username])
+  @@index([employeeId])
+}
+
+model Employee {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  job       String
+  salary    Float    @default(0)
+  role      String   @default("Employee") // Employee, HR, Manager
+  phone     String   @default("")
+  address   String   @default("")
+  photo     String   @default("")
+  idFront   String   @default("")
+  idBack    String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts     Account[]
+  attendance   Attendance[]
+  leaves       Leave[]
+  deductions   Deduction[]
+  advances     Advance[]
+  auditLogs    AuditLog[]
+
+  @@index([code])
+  @@index([name])
+}
+
+model Attendance {
+  id            String   @id @default(cuid())
+  employeeId    String
+  date          String
+  checkIn       String   @default("")
+  checkInMethod String   @default("manual") // gps, qr, upc, manual
+  checkInExtra  String   @default("")
+  checkOut      String   @default("")
+  checkOutMethod String  @default("")
+  checkOutExtra String   @default("")
+  delayMinutes  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@index([employeeId, date])
+  @@index([date])
+}
+
+model Leave {
+  id        String   @id @default(cuid())
+  employeeId String
+  type      String   @default("annual") // annual, sick
+  startDate String
+  endDate   String
+  days      Int      @default(1)
+  reason    String   @default("")
+  status    String   @default("pending") // pending, approved, rejected
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  employee  Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([status])
+}
+
+model Deduction {
+  id         String   @id @default(cuid())
+  employeeId String
+  month      String
+  amount     Float
+  reason     String   @default("")
+  createdAt  DateTime @default(now())
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, month])
+}
+
+model Advance {
+  id         String   @id @default(cuid())
+  employeeId String
+  month      String
+  amount     Float
+  reason     String   @default("")
+  createdAt  DateTime @default(now())
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, month])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  accountId  String
+  message    String
+  type       String   @default("info") // delay, leave, advance, info
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  account    Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+}
+
+model AppSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+  @@index([key])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  userName  String   @default("")
+  action    String
+  details   String   @default("")
+  createdAt DateTime @default(now())
+  employee  Employee @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
